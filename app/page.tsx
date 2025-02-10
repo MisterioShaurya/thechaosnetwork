@@ -1,101 +1,175 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+
+interface Reply {
+  content: string;
+  author: string;
+  createdAt: string;
+}
+
+interface Post {
+  _id: string;
+  content: string;
+  author: string;
+  createdAt: string;
+  replies: Reply[];
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [content, setContent] = useState("");
+  const [replyContent, setReplyContent] = useState<{ [key: string]: string }>({});
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+  // Fetch posts from the API
+  useEffect(() => {
+    async function fetchPosts() {
+      const res = await fetch("/api/posts");
+      const data = await res.json();
+      setPosts(Array.isArray(data) ? data : []);
+    }
+    fetchPosts();
+  }, []);
+
+  // Submit a new post
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content) return;
+
+    const res = await fetch("/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content, author: "Anonymous" }),
+    });
+
+    if (res.ok) {
+      const newPost = await res.json();
+      setPosts((prev) => [
+        { _id: newPost.insertedId, content, author: "Anonymous", createdAt: new Date().toISOString(), replies: [] },
+        ...prev,
+      ]);
+      setContent("");
+    }
+  };
+
+  // Submit a reply to a post
+  const handleReplySubmit = async (postId: string) => {
+    const reply = replyContent[postId];
+    if (!reply) return;
+
+    const res = await fetch("/api/posts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId, content: reply, author: "Anonymous" }),
+    });
+
+    if (res.ok) {
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === postId
+            ? {
+                ...post,
+                replies: [
+                  ...post.replies,
+                  {
+                    content: reply,
+                    author: "Anonymous",
+                    createdAt: new Date().toISOString(),
+                  },
+                ],
+              }
+            : post
+        )
+      );
+
+      setReplyContent((prev) => ({ ...prev, [postId]: "" }));
+      setReplyingTo(null);
+    }
+  };
+
+  return (
+    <main className="flex flex-col items-center min-h-screen bg-gray-50 p-4">
+      <h1 className="text-4xl font-bold text-center text-blue-600 mb-6">
+        The Chaos Network
+      </h1>
+
+      <form onSubmit={handleSubmit} className="w-full max-w-md bg-white p-6 rounded-lg shadow-lg mb-8">
+        <textarea
+          className="border border-gray-300 rounded-lg p-4 w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Share your thoughts..."
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={4}
+        />
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white p-3 rounded-lg transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          Post
+        </button>
+      </form>
+
+      <div className="w-full max-w-3xl">
+        {posts.length > 0 ? (
+          posts.map((post) => (
+            <div
+              key={post._id}
+              className="border border-gray-200 p-6 rounded-lg mb-6 bg-white shadow-xl transition-transform transform hover:scale-105 hover:shadow-2xl"
+            >
+              <p className="text-gray-800 text-lg">{post.content}</p>
+              <small className="text-gray-500 mt-2 block">
+                by {post.author} - {new Date(post.createdAt).toLocaleString()}
+              </small>
+
+              <button
+                onClick={() => setReplyingTo(post._id)}
+                className="mt-2 text-blue-600 hover:underline"
+              >
+                Reply
+              </button>
+
+              {replyingTo === post._id && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg shadow-sm">
+                  <textarea
+                    className="border border-gray-300 rounded-lg p-4 w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Write a reply..."
+                    value={replyContent[post._id] || ""}
+                    onChange={(e) =>
+                      setReplyContent((prev) => ({ ...prev, [post._id]: e.target.value }))
+                    }
+                    rows={3}
+                  />
+                  <button
+                    onClick={() => handleReplySubmit(post._id)}
+                    className="bg-blue-600 text-white p-2 rounded-lg"
+                  >
+                    Submit Reply
+                  </button>
+                </div>
+              )}
+
+              {post.replies && post.replies.length > 0 && (
+                <div className="mt-4 space-y-4">
+                  <h3 className="font-bold text-xl">Replies:</h3>
+                  <div className="space-y-2">
+                    {post.replies.map((reply, index) => (
+                      <div key={index} className="bg-gray-100 p-4 rounded-lg shadow-sm">
+                        <p className="text-gray-800">{reply.content}</p>
+                        <small className="text-gray-500">
+                          by {reply.author} - {new Date(reply.createdAt).toLocaleString()}
+                        </small>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <p>No posts available.</p>
+        )}
+      </div>
+    </main>
   );
 }
