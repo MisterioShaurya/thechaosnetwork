@@ -57,12 +57,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    const objectId = new ObjectId(postId);
+    let objectId = new ObjectId(postId);
     let result;
 
     if (parentReplyId) {
       // Add a sub-reply inside an existing reply
-      const result = await db.collection("posts").updateOne(
+      result = await db.collection("posts").updateOne(
         { "replies._id": parentReplyId },  // Match the parent reply
         {
           $set: {
