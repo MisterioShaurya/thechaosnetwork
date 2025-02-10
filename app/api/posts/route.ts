@@ -57,28 +57,47 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // const objectId = new ObjectId(postId);
+    const objectId = new ObjectId(postId);
     let result;
 
     if (parentReplyId) {
       // Add a sub-reply inside an existing reply
-      const result = await db.collection("posts").updateOne(
-        { "replies._id": parentReplyId },  // Match the parent reply
+      result = await db.collection("posts").updateOne(
         {
-          $set: {
+          _id: objectId,
+          "replies._id": new ObjectId(parentReplyId), // Locate the parent reply
+        },
+        {
+          $push: {
             "replies.$.replies": {
-              $each: [{
-                _id: new ObjectId(),
-                content,
-                author,
-                createdAt: new Date(),
-                replies: [],
-              }]
-            }
-          }
+              _id: new ObjectId(),
+              content,
+              author,
+              createdAt: new Date(),
+              replies: [], // ✅ Initialize replies array
+            },
+          },
         }
       );
-    }return NextResponse.json(result);
+    } else {
+      // Add a top-level reply
+      result = await db.collection("posts").updateOne(
+        { _id: objectId },
+        {
+          $push: {
+            replies: {
+              _id: new ObjectId(),
+              content,
+              author,
+              createdAt: new Date(),
+              replies: [], // ✅ Initialize replies array
+            },
+          },
+        }
+      );
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to add reply", details: error },

@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb"; // Removed unused 'Db'
+import { MongoClient, Db } from "mongodb";
 
 const uri: string = process.env.MONGODB_URI as string;
 const options = {};
@@ -11,7 +11,7 @@ let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
 declare global {
-  let _mongoClientPromise: Promise<MongoClient> | undefined; // Changed 'var' to 'let'
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
 if (process.env.NODE_ENV === "development") {
