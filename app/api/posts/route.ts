@@ -62,39 +62,23 @@ export async function PATCH(req: Request) {
 
     if (parentReplyId) {
       // Add a sub-reply inside an existing reply
-      result = await db.collection("posts").updateOne(
+      const result = await db.collection("posts").updateOne(
+        { "replies._id": parentReplyId },  // Match the parent reply
         {
-          _id: objectId,
-          "replies._id": new ObjectId(parentReplyId), // Locate the parent reply
-        },
-        {
-          $push: {
+          $set: {
             "replies.$.replies": {
-              _id: new ObjectId(),
-              content,
-              author,
-              createdAt: new Date(),
-              replies: [], // ✅ Initialize replies array
-            },
-          },
+              $each: [{
+                _id: new ObjectId(),
+                content,
+                author,
+                createdAt: new Date(),
+                replies: [],
+              }]
+            }
+          }
         }
       );
-    } else {
-      // Add a top-level reply
-      result = await db.collection("posts").updateOne(
-        { _id: objectId },
-        {
-          $push: {
-            replies: {
-              _id: new ObjectId(),
-              content,
-              author,
-              createdAt: new Date(),
-              replies: [], // ✅ Initialize replies array
-            },
-          },
-        }
-      );
+      
     }
 
     return NextResponse.json(result);
