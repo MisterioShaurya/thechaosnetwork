@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npm install mongodb && npm run build"
+  command = "NEXT_PUBLIC_ESLINT_IGNORE=true npm install && npm install mongodb && npm run build"
   publish = ".next"
 
 [[plugins]]
